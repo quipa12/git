@@ -1,0 +1,101 @@
+import pytesseract
+from PIL import Image
+import re
+import glob
+import pandas as pd
+
+def get_data(file):
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Users\USER\AppData\Local\Tesseract-OCR\tesseract.exe'
+    tessdata_dir_config = r'--tessdata-dir "C:/Users/USER/AppData/Local/Tesseract-OCR/tessdata"'
+    phrase = pytesseract.image_to_string(Image.open(file), "por")
+    lista_completa = [content for content in phrase.strip().splitlines() if content]
+    lista_limpa= []
+    
+
+    for item in lista_completa:
+        if item == " ":
+            pass
+        else:
+            lista_limpa.append(item)
+
+    lista_rubricas=[]
+
+    for item in lista_limpa:
+        item_slice = item[0:5]
+        if item_slice == "FOLHA":
+            lista_rubricas.append(item)
+            break
+        item_slice = item[0:4]
+        if item_slice == "13. ":
+            lista_rubricas.append(item)
+            break
+    
+        if lista_limpa.index(item)==(len(lista_limpa)-1):
+            lista_rubricas.append("MISSING")
+            break
+
+    for item in lista_limpa:
+        item_slice = item[0:4]
+        if item_slice == "Nome":
+            lista_rubricas.append(lista_limpa[lista_limpa.index(item)+1])
+            break
+        if lista_limpa.index(item)==(len(lista_limpa)-1):
+            lista_rubricas.append("MISSING")
+            break
+
+
+    for item in lista_limpa:
+        item_slice = item[0:6]
+        padrao_basico_rubrica= re.compile(r'\d\d\.\d\d\d')
+        mo = padrao_basico_rubrica.search(item_slice)
+        if mo != None:
+            lista_rubricas.append(item)
+            
+
+    
+              
+                                  
+
+    return lista_rubricas
+
+
+
+
+dataframe_geral=pd.DataFrame()
+dataframe_geral['Rubricas']=""
+dataframe_geral['Tipo Folha']=""
+dataframe_geral['Nome Servidor']=""
+dataframe_geral['Arquivo Origem']=""
+
+
+listaarquivos = glob.glob("C:/Users/Home/Desktop/testes3/JPEG/*.jpg")
+for item in listaarquivos:
+    print(item)
+
+    tipo_folha = get_data(item)[0]
+    nome_servidor = get_data(item)[1]
+    rubricas= get_data(item)[2:]
+    dataframe=pd.DataFrame(rubricas)
+    dataframe.transpose()
+    dataframe.rename(columns = {0:'Rubricas'}, inplace = True) 
+    dataframe['Tipo Folha'] = tipo_folha
+    dataframe['Nome Servidor'] = nome_servidor
+    dataframe['Arquivo Origem'] = item
+    frames = (dataframe_geral, dataframe)
+    dataframe_geral = pd.concat(frames)
+    
+    
+
+
+    
+
+dataframe_geral.to_excel('teste1.xlsx')
+
+    
+    
+    
+    
+    
+    
+
+
